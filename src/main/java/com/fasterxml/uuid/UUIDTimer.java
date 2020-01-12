@@ -107,6 +107,8 @@ public class UUIDTimer
      */
     protected final TimestampSynchronizer _syncer;
 
+    protected final TimestampSource _source;
+
     /**
      * Random number generator used to generate additional information 
      * to further reduce probability of collisions.
@@ -159,8 +161,14 @@ public class UUIDTimer
 
     public UUIDTimer(Random rnd, TimestampSynchronizer sync) throws IOException
     {
+        this(rnd, sync, null);
+    }
+
+    public UUIDTimer(Random rnd, TimestampSynchronizer sync, TimestampSource source) throws IOException
+    {
         _random = rnd;
         _syncer = sync;
+        _source = source != null ? source : TimestampSources.SYSTEM_TIMESTAMP_SOURCE;
         initCounters(rnd);
         _lastSystemTimestamp = 0L;
         // This may get overwritten by the synchronizer
@@ -213,7 +221,7 @@ public class UUIDTimer
      */
     public synchronized long getTimestamp()
     {
-        long systime = System.currentTimeMillis();
+        long systime = _source.currentTimeMillis();
         /* Let's first verify that the system time is not going backwards;
          * independent of whether we can use it:
          */
@@ -342,7 +350,7 @@ public class UUIDTimer
      * @param actDiff Number of milliseconds to wait for from current 
      *    time point, to catch up
      */
-    protected static void slowDown(long startTime, long actDiff)
+    private void slowDown(long startTime, long actDiff)
     {
         /* First, let's determine how long we'd like to wait.
          * This is based on how far ahead are we as of now.
@@ -374,6 +382,6 @@ public class UUIDTimer
             if (++counter > MAX_WAIT_COUNT) {
                 break;
             }
-        } while (System.currentTimeMillis() < waitUntil);
+        } while (_source.currentTimeMillis() < waitUntil);
     }
 }
